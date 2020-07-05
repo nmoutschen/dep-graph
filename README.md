@@ -41,10 +41,10 @@ fn my_graph() {
     // entire node (e.g. "root", "dep1", etc. in this case).
     resolver
         // If you want to run this sequentially rather than in parallel, you
-        // can replace `par_for_each` with `for_each`.
-        .par_for_each(&|node| {
-            println!("{}", node)
-        })
-        .unwrap();
+        // can replace `into_par_iter` with `into_iter`.
+        .into_par_iter()
+        .for_each(&|node| {
+            println!("{}", *node)
+        });
 }
 ```

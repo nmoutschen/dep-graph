@@ -29,13 +29,13 @@ pub fn parallel_benchmark(c: &mut Criterion) {
     const NUM_LAYERS: usize = 20;
     fn par_no_op(nodes: &Vec<StrNode>) {
         Resolver::new(nodes)
-            .par_for_each(&|_node| thread::sleep(Duration::from_nanos(100)))
-            .unwrap()
+            .into_par_iter()
+            .for_each(&|_node| thread::sleep(Duration::from_nanos(100)))
     }
     fn seq_no_op(nodes: &Vec<StrNode>) {
         Resolver::new(nodes)
+            .into_iter()
             .for_each(|_node| thread::sleep(Duration::from_nanos(100)))
-            .unwrap()
     }
 
     {

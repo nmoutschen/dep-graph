@@ -17,7 +17,7 @@ This library supports both sequential and parallel (multi-threaded) operations o
 Here is a simple example on how to use this library:
 
 ```rust
-use depgraph::{Node, Resolver,StrNode};
+use dep_graph::{Node, Resolver,StrNode};
 
 fn my_graph() {
     // Create a list of nodes

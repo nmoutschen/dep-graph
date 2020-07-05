@@ -68,7 +68,7 @@
 //! ## Basic usage
 //!
 //! ```rust
-//! use depgraph::{Node, Resolver,StrNode};
+//! use dep_graph::{Node, Resolver,StrNode};
 //!
 //! fn my_graph() {
 //!     // Create a list of nodes
@@ -113,3 +113,71 @@ mod resolver;
 
 pub use dep::{Node, StrNode};
 pub use resolver::Resolver;
+
+/// Test suite
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::StrNode;
+
+    /// Run against a diamond graph
+    ///
+    /// ```no_run
+    ///   1
+    ///  / \
+    /// 2   3
+    ///  \ /
+    ///   4
+    /// ```
+    #[test]
+    fn diamond_graph() {
+        let mut n1 = StrNode::new("1");
+        let mut n2 = StrNode::new("2");
+        let mut n3 = StrNode::new("3");
+        let n4 = StrNode::new("4");
+
+        n1.add_dep(n2.id());
+        n1.add_dep(n3.id());
+        n2.add_dep(n4.id());
+        n3.add_dep(n4.id());
+
+        let deps = vec![n1, n2, n3, n4];
+
+        let r = Resolver::new(&deps);
+        r.par_for_each(&|_node| {}).unwrap();
+    }
+
+    /// 1 000 nodes with 999 depending on one
+    #[test]
+    fn thousand_graph() {
+        let mut nodes: Vec<StrNode> = (0..1000)
+            .map(|i| StrNode::new(format!("{}", i).as_str()))
+            .collect();
+        for i in 1..1000 {
+            nodes[i].add_dep(&"0".to_string());
+        }
+
+        let r = Resolver::new(&nodes);
+        r.par_for_each(&|_node_id| {}).unwrap();
+    }
+
+    #[test]
+    fn circular_graph() {
+        let mut n1 = StrNode::new("1");
+        let mut n2 = StrNode::new("2");
+        let mut n3 = StrNode::new("3");
+
+        n1.add_dep(n2.id());
+        n2.add_dep(n3.id());
+        n3.add_dep(n1.id());
+
+        let deps = vec![n1, n2, n3];
+
+        // This should return an exception
+        let r = Resolver::new(&deps);
+        r.par_for_each(&|node_id| {
+            println!("{}", node_id);
+        })
+        .unwrap_err();
+    }
+}

@@ -69,32 +69,46 @@
 //!
 //! ```rust
 //! use dep_graph::{Node, DepGraph,StrNode};
+//! #[cfg(feature = "rayon")]
 //! use rayon::prelude::*;
 //!
-//! fn my_graph() {
-//!     // Create a list of nodes
-//!     let mut root = StrNode::new("root");
-//!     let mut dep1 = StrNode::new("dep1");
-//!     let mut dep2 = StrNode::new("dep2");
-//!     let leaf = StrNode::new("leaf");
+//! // Create a list of nodes
+//! let mut root = StrNode::new("root");
+//! let mut dep1 = StrNode::new("dep1");
+//! let mut dep2 = StrNode::new("dep2");
+//! let leaf = StrNode::new("leaf");
 //!
-//!     // Map their connections
-//!     root.add_dep(dep1.id());
-//!     root.add_dep(dep2.id());
-//!     dep1.add_dep(leaf.id());
-//!     dep2.add_dep(leaf.id());
+//! // Map their connections
+//! root.add_dep(dep1.id());
+//! root.add_dep(dep2.id());
+//! dep1.add_dep(leaf.id());
+//! dep2.add_dep(leaf.id());
 //!
-//!     // Create a graph
-//!     let nodes = vec![root, dep1, dep2, leaf];
+//! // Create a graph
+//! let nodes = vec![root, dep1, dep2, leaf];
+//!
+//! // Print the name of all nodes in the dependency graph.
+//! // This will parse the dependency graph sequentially
+//! {
 //!     let graph = DepGraph::new(&nodes);
+//!     graph
+//!         .into_iter()
+//!         .for_each(|node| {
+//!             println!("{:?}", node)
+//!         });
+//! }
 //!
-//!     // Run an operation over all nodes in the graph.
-//!     // The function receives the identity value from the node, not the
-//!     // entire node (e.g. "root", "dep1", etc. in this case).
+//! // This is the same as the previous command, excepts it leverages rayon
+//! // to process them in parallel as much as possible.
+//! #[cfg(feature = "rayon")]
+//! {
+//!     let graph = DepGraph::new(&nodes);
 //!     graph
 //!         .into_par_iter()
 //!         .for_each(|node| {
-//!             println!("{}", *node)
+//!             // The node is a depgraph::Wrapper object, not a String.
+//!             // We need to use `*node` to get its value.
+//!             println!("{:?}", *node)
 //!         });
 //! }
 //! ```
@@ -111,15 +125,19 @@
 mod dep;
 pub mod error;
 mod graph;
+#[cfg(feature = "rayon")]
+mod graph_par;
 
 pub use dep::{Node, StrNode};
-pub use graph::{DepGraph, Wrapper};
-// pub use graph::{NodeWrapper, DepGraph, DepGraphIter, DepGraphParIter};
+pub use graph::DepGraph;
+#[cfg(feature = "rayon")]
+pub use graph_par::Wrapper;
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::StrNode;
+    #[cfg(feature = "rayon")]
     use rayon::prelude::*;
 
     /// Run against a diamond graph
@@ -131,6 +149,7 @@ mod tests {
     ///  \ /
     ///   4
     /// ```
+    #[cfg(feature = "rayon")]
     #[test]
     fn par_diamond_graph() {
         let mut n1 = StrNode::new("1");
@@ -149,6 +168,30 @@ mod tests {
         let result = r.into_par_iter().map(|_| true).collect::<Vec<bool>>();
 
         assert_eq!(result.len(), deps.len());
+    }
+
+    #[cfg(feature = "rayon")]
+    #[test]
+    fn par_diamond_graph_steps() {
+        let mut n1 = StrNode::new("1");
+        let mut n2 = StrNode::new("2");
+        let mut n3 = StrNode::new("3");
+        let n4 = StrNode::new("4");
+
+        n1.add_dep(n2.id());
+        n1.add_dep(n3.id());
+        n2.add_dep(n4.id());
+        n3.add_dep(n4.id());
+
+        let deps = vec![n1, n2, n3, n4];
+
+        let r = DepGraph::new(&deps);
+        let result = r
+            .into_par_iter()
+            .map(|node_id| (*node_id).parse::<u64>().unwrap())
+            .reduce(|| 0, |acc, x| acc + x);
+
+        assert_eq!(result, 10);
     }
 
     #[test]
@@ -172,6 +215,7 @@ mod tests {
     }
 
     /// 1 000 nodes with 999 depending on one
+    #[cfg(feature = "rayon")]
     #[test]
     fn par_thousand_graph() {
         let mut nodes: Vec<StrNode> = (0..1000)

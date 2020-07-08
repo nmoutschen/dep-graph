@@ -10,6 +10,9 @@ description = "Dependency graph resolver library"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = ["rayon"]
+
 [dev-dependencies]
 criterion = "0.3"
 
@@ -19,5 +22,5 @@ harness = false
 
 [dependencies]
 crossbeam-channel = "0.4"
-rayon = "1.3"
+rayon = { version = "1.3", optional = true }
 num_cpus = "1.13"

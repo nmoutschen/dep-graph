@@ -23,8 +23,7 @@ impl fmt::Display for Error {
                 "The iterator attached to the coordination thread dropped"
             ),
             Self::NoAvailableNodeError => write!(f, "No node are currently available"),
-            Self::ResolveGraphError(reason) => write!(f, "Failed to resolve the graph: {}", reason),
-            // _ => write!(f, "{:?}", self),
+            Self::ResolveGraphError(reason) => write!(f, "Failed to resolve the graph: {}", reason), // _ => write!(f, "{:?}", self),
         }
     }
 }

@@ -18,7 +18,10 @@ impl fmt::Display for Error {
                 write!(f, "Failed to close node {}: {}", name, reason)
             }
             Self::EmptyListError => write!(f, "The dependency list is empty"),
-            Self::IteratorDropped => write!(f, "The iterator attached to the coordination thread dropped"),
+            Self::IteratorDropped => write!(
+                f,
+                "The iterator attached to the coordination thread dropped"
+            ),
             Self::NoAvailableNodeError => write!(f, "No node are currently available"),
             Self::ResolveGraphError(reason) => write!(f, "Failed to resolve the graph: {}", reason),
             // _ => write!(f, "{:?}", self),

@@ -17,7 +17,8 @@ This library supports both sequential and parallel (multi-threaded) operations o
 Here is a simple example on how to use this library:
 
 ```rust
-use dep_graph::{Node, Resolver,StrNode};
+use dep_graph::{Node, DepGraph,StrNode};
+use rayon::prelude::*;
 
 fn my_graph() {
     // Create a list of nodes
@@ -32,18 +33,16 @@ fn my_graph() {
     dep1.add_dep(leaf.id());
     dep2.add_dep(leaf.id());
 
-    // Create a resolver
+    // Create a graph
     let nodes = vec![root, dep1, dep2, leaf];
-    let resolver = Resolver::new(&nodes);
+    let graph = DepGraph::new(&nodes);
 
     // Run an operation over all nodes in the graph.
     // The function receives the identity value from the node, not the
     // entire node (e.g. "root", "dep1", etc. in this case).
-    resolver
-        // If you want to run this sequentially rather than in parallel, you
-        // can replace `into_par_iter` with `into_iter`.
+    graph
         .into_par_iter()
-        .for_each(&|node| {
+        .for_each(|node| {
             println!("{}", *node)
         });
 }

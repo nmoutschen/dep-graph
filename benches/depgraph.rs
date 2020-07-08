@@ -1,5 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use dep_graph::{Node, Resolver, StrNode};
+use dep_graph::{Node, DepGraph, StrNode};
+use rayon::prelude::*;
 use std::thread;
 use std::time::Duration;
 
@@ -28,12 +29,12 @@ fn add_layer(index: usize, count: usize) -> Vec<StrNode> {
 pub fn parallel_benchmark(c: &mut Criterion) {
     const NUM_LAYERS: usize = 20;
     fn par_no_op(nodes: &Vec<StrNode>) {
-        Resolver::new(nodes)
+        DepGraph::new(nodes)
             .into_par_iter()
-            .for_each(&|_node| thread::sleep(Duration::from_nanos(100)))
+            .for_each(|_node| thread::sleep(Duration::from_nanos(100)))
     }
     fn seq_no_op(nodes: &Vec<StrNode>) {
-        Resolver::new(nodes)
+        DepGraph::new(nodes)
             .into_iter()
             .for_each(|_node| thread::sleep(Duration::from_nanos(100)))
     }

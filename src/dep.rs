@@ -8,8 +8,8 @@ use std::hash::Hash;
 ///
 /// A node is represented by a unique identifier and may contain a list of
 /// dependencies.
-pub trait Node: Clone + Send + Sync + 'static {
-    type Inner: Clone + fmt::Debug + fmt::Display + Eq + Hash + PartialEq + Send + Sync + 'static;
+pub trait Node: Clone + fmt::Debug + Send + Sync + Sized {
+    type Inner: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync;
 
     /// Node identifer
     ///

@@ -139,6 +139,7 @@ mod tests {
     use crate::StrNode;
     #[cfg(feature = "rayon")]
     use rayon::prelude::*;
+    use std::time::Duration;
 
     /// Run against a diamond graph
     ///
@@ -192,6 +193,31 @@ mod tests {
             .reduce(|| 0, |acc, x| acc + x);
 
         assert_eq!(result, 10);
+    }
+
+    #[cfg(feature = "rayon")]
+    #[test]
+    fn par_diamond_graph_with_timeout() {
+        let mut n1 = StrNode::new("1");
+        let mut n2 = StrNode::new("2");
+        let mut n3 = StrNode::new("3");
+        let n4 = StrNode::new("4");
+
+        n1.add_dep(n2.id());
+        n1.add_dep(n3.id());
+        n2.add_dep(n4.id());
+        n3.add_dep(n4.id());
+
+        let deps = vec![n1, n2, n3, n4];
+
+        let r = DepGraph::new(&deps);
+        let result = r
+            .into_par_iter()
+            .with_timeout(Duration::from_secs(2))
+            .map(|_| true)
+            .collect::<Vec<bool>>();
+
+        assert_eq!(result.len(), deps.len());
     }
 
     #[test]

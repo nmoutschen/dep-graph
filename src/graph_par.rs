@@ -17,12 +17,13 @@ use std::iter::{DoubleEndedIterator, ExactSizeIterator};
 use std::ops;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
-    Arc,
+    Arc, RwLock,
 };
 use std::thread;
 use std::time::Duration;
 
-const DEFAULT_TIMEOUT: Duration = Duration::from_secs(1);
+/// Default timeout in milliseconds
+const DEFAULT_TIMEOUT: Duration = Duration::from_millis(1000);
 
 /// Add into_par_iter() to DepGraph
 impl<I> IntoParallelIterator for DepGraph<I>
@@ -40,7 +41,6 @@ where
 /// Wrapper for an item
 ///
 /// This is used to pass items through iterators
-#[cfg(feature = "rayon")]
 #[derive(Clone)]
 pub struct Wrapper<I>
 where
@@ -51,7 +51,6 @@ where
     item_done_tx: Sender<I>,
 }
 
-#[cfg(feature = "rayon")]
 impl<I> Wrapper<I>
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
@@ -66,7 +65,6 @@ where
     }
 }
 
-#[cfg(feature = "rayon")]
 impl<I> Drop for Wrapper<I>
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
@@ -79,7 +77,6 @@ where
     }
 }
 
-#[cfg(feature = "rayon")]
 impl<I> ops::Deref for Wrapper<I>
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
@@ -91,7 +88,6 @@ where
     }
 }
 
-#[cfg(feature = "rayon")]
 impl<I> ops::DerefMut for Wrapper<I>
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
@@ -101,11 +97,9 @@ where
     }
 }
 
-#[cfg(feature = "rayon")]
 impl<I> Eq for Wrapper<I> where I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static
 {}
 
-#[cfg(feature = "rayon")]
 impl<I> Hash for Wrapper<I>
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
@@ -115,7 +109,6 @@ where
     }
 }
 
-#[cfg(feature = "rayon")]
 impl<I> cmp::PartialEq for Wrapper<I>
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
@@ -126,18 +119,16 @@ where
 }
 
 /// Parallel iterator for DepGraph
-#[cfg(feature = "rayon")]
 pub struct DepGraphParIter<I>
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
 {
-    timeout: Duration,
+    timeout: Arc<RwLock<Duration>>,
     counter: Arc<AtomicUsize>,
     item_ready_rx: Receiver<I>,
     item_done_tx: Sender<I>,
 }
 
-#[cfg(feature = "rayon")]
 impl<I> DepGraphParIter<I>
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
@@ -147,27 +138,12 @@ where
     /// This will create a thread and crossbeam channels to listen/send
     /// available and processed nodes.
     pub fn new(ready_nodes: Vec<I>, deps: DependencyMap<I>, rdeps: DependencyMap<I>) -> Self {
+        let timeout = Arc::new(RwLock::new(DEFAULT_TIMEOUT));
         let counter = Arc::new(AtomicUsize::new(0));
 
-        let (item_ready_rx, item_done_tx) =
-            DepGraphParIter::init(counter.clone(), deps, rdeps, ready_nodes);
+        // let (item_ready_rx, item_done_tx) =
+        //     DepGraphParIter::init(counter.clone(), deps, rdeps, ready_nodes);
 
-        DepGraphParIter {
-            timeout: DEFAULT_TIMEOUT,
-            counter,
-
-            item_ready_rx,
-            item_done_tx,
-        }
-    }
-
-    /// Initialize the DepGraph
-    fn init(
-        counter: Arc<AtomicUsize>,
-        deps: DependencyMap<I>,
-        rdeps: DependencyMap<I>,
-        ready_nodes: Vec<I>,
-    ) -> (Receiver<I>, Sender<I>) {
         // Create communication channel for processed nodes
         let (item_ready_tx, item_ready_rx) = crossbeam_channel::unbounded::<I>();
         let (item_done_tx, item_done_rx) = crossbeam_channel::unbounded::<I>();
@@ -176,6 +152,10 @@ where
         ready_nodes
             .iter()
             .for_each(|node| item_ready_tx.send(node.clone()).unwrap());
+
+        // Clone Arcs for dispatcher thread
+        let loop_timeout = timeout.clone();
+        let loop_counter = counter.clone();
 
         // Start dispatcher thread
         thread::spawn(move || {
@@ -198,9 +178,9 @@ where
                         }
                     },
                     // Timeout
-                    default(DEFAULT_TIMEOUT) => {
+                    default(*loop_timeout.read().unwrap()) => {
                         let deps = deps.read().unwrap();
-                        let counter_val = counter.load(Ordering::SeqCst);
+                        let counter_val = loop_counter.load(Ordering::SeqCst);
                         if deps.is_empty() {
                             break;
                         } else if counter_val > 0 {
@@ -218,11 +198,21 @@ where
             Ok(())
         });
 
-        (item_ready_rx, item_done_tx)
+        DepGraphParIter {
+            timeout,
+            counter,
+
+            item_ready_rx,
+            item_done_tx,
+        }
+    }
+
+    pub fn with_timeout(self, timeout: Duration) -> Self {
+        *self.timeout.write().unwrap() = timeout;
+        self
     }
 }
 
-#[cfg(feature = "rayon")]
 impl<I> ParallelIterator for DepGraphParIter<I>
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
@@ -237,7 +227,6 @@ where
     }
 }
 
-#[cfg(feature = "rayon")]
 impl<I> IndexedParallelIterator for DepGraphParIter<I>
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
@@ -258,7 +247,6 @@ where
         CB: ProducerCallback<Self::Item>,
     {
         callback.callback(DepGraphProducer {
-            timeout: self.timeout,
             counter: self.counter.clone(),
             item_ready_rx: self.item_ready_rx,
             item_done_tx: self.item_done_tx,
@@ -266,18 +254,15 @@ where
     }
 }
 
-#[cfg(feature = "rayon")]
 struct DepGraphProducer<I>
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
 {
-    timeout: Duration,
     counter: Arc<AtomicUsize>,
     item_ready_rx: Receiver<I>,
     item_done_tx: Sender<I>,
 }
 
-#[cfg(feature = "rayon")]
 impl<I> Iterator for DepGraphProducer<I>
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
@@ -297,7 +282,6 @@ where
     }
 }
 
-#[cfg(feature = "rayon")]
 impl<I> DoubleEndedIterator for DepGraphProducer<I>
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
@@ -307,13 +291,11 @@ where
     }
 }
 
-#[cfg(feature = "rayon")]
 impl<I> ExactSizeIterator for DepGraphProducer<I> where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static
 {
 }
 
-#[cfg(feature = "rayon")]
 impl<I> Producer for DepGraphProducer<I>
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
@@ -323,7 +305,6 @@ where
 
     fn into_iter(self) -> Self::IntoIter {
         Self {
-            timeout: self.timeout,
             counter: self.counter.clone(),
             item_ready_rx: self.item_ready_rx.clone(),
             item_done_tx: self.item_done_tx,
@@ -333,13 +314,11 @@ where
     fn split_at(self, _: usize) -> (Self, Self) {
         (
             Self {
-                timeout: self.timeout,
                 counter: self.counter.clone(),
                 item_ready_rx: self.item_ready_rx.clone(),
                 item_done_tx: self.item_done_tx.clone(),
             },
             Self {
-                timeout: self.timeout,
                 counter: self.counter.clone(),
                 item_ready_rx: self.item_ready_rx.clone(),
                 item_done_tx: self.item_done_tx,

@@ -8,45 +8,34 @@ use std::hash::Hash;
 ///
 /// A node is represented by a unique identifier and may contain a list of
 /// dependencies.
-pub trait Node: Clone + fmt::Debug + Send + Sync + Sized {
-    type Inner: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync;
-
-    /// Node identifer
-    ///
-    /// This value should be used to identify this node by the nodes that
-    /// depend on it.
-    fn id(&self) -> &Self::Inner;
-    fn deps(&self) -> &HashSet<Self::Inner>;
-    fn add_dep(&mut self, dep: &Self::Inner);
-}
-
 #[derive(Clone, Debug)]
-pub struct StrNode {
-    name: String,
-    dep_nodes: HashSet<String>,
+pub struct Node<I>
+where
+    I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync,
+{
+    id: I,
+    deps: HashSet<I>,
 }
 
-impl StrNode {
-    pub fn new(name: &str) -> StrNode {
-        StrNode {
-            name: name.to_string(),
-            dep_nodes: Default::default(),
+impl<I> Node<I>
+where
+    I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync,
+{
+    pub fn new(id: I) -> Node<I> {
+        Node {
+            id,
+            deps: HashSet::default(),
         }
     }
-}
 
-impl Node for StrNode {
-    type Inner = String;
-
-    fn id(&self) -> &Self::Inner {
-        &self.name
+    pub fn id(&self) -> &I {
+        &self.id
     }
-
-    fn deps(&self) -> &HashSet<Self::Inner> {
-        &self.dep_nodes
+    pub fn deps(&self) -> &HashSet<I> {
+        &self.deps
     }
-    fn add_dep(&mut self, dep: &Self::Inner) {
-        self.dep_nodes.insert(dep.clone());
+    pub fn add_dep(&mut self, dep: I) {
+        self.deps.insert(dep);
     }
 }
 
@@ -56,16 +45,16 @@ mod tests {
 
     #[test]
     fn empty_node() {
-        let node = StrNode::new("node");
+        let node = Node::new("node");
 
-        assert_eq!(node.id(), "node");
+        assert_eq!(*node.id(), "node");
         assert_eq!(node.deps().len(), 0);
     }
 
     #[test]
     fn one_dep() {
-        let mut root = StrNode::new("root");
-        let dep1 = StrNode::new("dep1");
+        let mut root = Node::new("root");
+        let dep1 = Node::new("dep1");
 
         root.add_dep(dep1.id());
 
@@ -74,9 +63,9 @@ mod tests {
 
     #[test]
     fn two_deps() {
-        let mut root = StrNode::new("root");
-        let dep1 = StrNode::new("dep1");
-        let dep2 = StrNode::new("dep2");
+        let mut root = Node::new("root");
+        let dep1 = Node::new("dep1");
+        let dep2 = Node::new("dep2");
 
         root.add_dep(dep1.id());
         root.add_dep(dep2.id());
@@ -88,10 +77,10 @@ mod tests {
 
     #[test]
     fn diamonds() {
-        let mut root = StrNode::new("root");
-        let mut dep1 = StrNode::new("dep1");
-        let mut dep2 = StrNode::new("dep2");
-        let leaf = StrNode::new("leaf");
+        let mut root = Node::new("root");
+        let mut dep1 = Node::new("dep1");
+        let mut dep2 = Node::new("dep2");
+        let leaf = Node::new("leaf");
 
         root.add_dep(dep1.id());
         root.add_dep(dep2.id());

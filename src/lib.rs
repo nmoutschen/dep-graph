@@ -68,15 +68,15 @@
 //! ## Basic usage
 //!
 //! ```rust
-//! use dep_graph::{Node, DepGraph,StrNode};
+//! use dep_graph::{Node, DepGraph};
 //! #[cfg(feature = "rayon")]
 //! use rayon::prelude::*;
 //!
 //! // Create a list of nodes
-//! let mut root = StrNode::new("root");
-//! let mut dep1 = StrNode::new("dep1");
-//! let mut dep2 = StrNode::new("dep2");
-//! let leaf = StrNode::new("leaf");
+//! let mut root = Node::new("root");
+//! let mut dep1 = Node::new("dep1");
+//! let mut dep2 = Node::new("dep2");
+//! let leaf = Node::new("leaf");
 //!
 //! // Map their connections
 //! root.add_dep(dep1.id());
@@ -116,27 +116,26 @@
 //! ## Create your own node type
 //!
 //! This library provides a node for string types
-//! [`StrNode`](struct.StrNode.html).
+//! [`Node`](struct.Node.html).
 //!
 //! However, you may want to implement your own node type to hold another type
 //! of identity information. For this purpose, you can implement the
 //! [`Node trait`](trait.Node.html).
 
-mod node;
 pub mod error;
 mod graph;
 #[cfg(feature = "rayon")]
 mod graph_par;
+mod node;
 
-pub use node::{Node, StrNode};
 pub use graph::DepGraph;
 #[cfg(feature = "rayon")]
 pub use graph_par::Wrapper;
+pub use node::Node;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::StrNode;
     #[cfg(feature = "rayon")]
     use rayon::prelude::*;
     use std::time::Duration;
@@ -153,10 +152,10 @@ mod tests {
     #[cfg(feature = "rayon")]
     #[test]
     fn par_diamond_graph() {
-        let mut n1 = StrNode::new("1");
-        let mut n2 = StrNode::new("2");
-        let mut n3 = StrNode::new("3");
-        let n4 = StrNode::new("4");
+        let mut n1 = Node::new("1");
+        let mut n2 = Node::new("2");
+        let mut n3 = Node::new("3");
+        let n4 = Node::new("4");
 
         n1.add_dep(n2.id());
         n1.add_dep(n3.id());
@@ -174,10 +173,10 @@ mod tests {
     #[cfg(feature = "rayon")]
     #[test]
     fn par_diamond_graph_steps() {
-        let mut n1 = StrNode::new("1");
-        let mut n2 = StrNode::new("2");
-        let mut n3 = StrNode::new("3");
-        let n4 = StrNode::new("4");
+        let mut n1 = Node::new("1");
+        let mut n2 = Node::new("2");
+        let mut n3 = Node::new("3");
+        let n4 = Node::new("4");
 
         n1.add_dep(n2.id());
         n1.add_dep(n3.id());
@@ -198,10 +197,10 @@ mod tests {
     #[cfg(feature = "rayon")]
     #[test]
     fn par_diamond_graph_with_timeout() {
-        let mut n1 = StrNode::new("1");
-        let mut n2 = StrNode::new("2");
-        let mut n3 = StrNode::new("3");
-        let n4 = StrNode::new("4");
+        let mut n1 = Node::new("1");
+        let mut n2 = Node::new("2");
+        let mut n3 = Node::new("3");
+        let n4 = Node::new("4");
 
         n1.add_dep(n2.id());
         n1.add_dep(n3.id());
@@ -222,10 +221,10 @@ mod tests {
 
     #[test]
     fn iter_diamond_graph() {
-        let mut n1 = StrNode::new("1");
-        let mut n2 = StrNode::new("2");
-        let mut n3 = StrNode::new("3");
-        let n4 = StrNode::new("4");
+        let mut n1 = Node::new("1");
+        let mut n2 = Node::new("2");
+        let mut n3 = Node::new("3");
+        let n4 = Node::new("4");
 
         n1.add_dep(n2.id());
         n1.add_dep(n3.id());
@@ -244,11 +243,9 @@ mod tests {
     #[cfg(feature = "rayon")]
     #[test]
     fn par_thousand_graph() {
-        let mut nodes: Vec<StrNode> = (0..1000)
-            .map(|i| StrNode::new(format!("{}", i).as_str()))
-            .collect();
+        let mut nodes: Vec<Node<_>> = (0..1000).map(|i| Node::new(format!("{}", i))).collect();
         for i in 1..1000 {
-            nodes[i].add_dep(&"0".to_string());
+            nodes[i].add_dep("0".to_string());
         }
 
         let r = DepGraph::new(&nodes);
@@ -259,11 +256,9 @@ mod tests {
 
     #[test]
     fn iter_thousand_graph() {
-        let mut nodes: Vec<StrNode> = (0..1000)
-            .map(|i| StrNode::new(format!("{}", i).as_str()))
-            .collect();
+        let mut nodes: Vec<Node<_>> = (0..1000).map(|i| Node::new(format!("{}", i))).collect();
         for i in 1..1000 {
-            nodes[i].add_dep(&"0".to_string());
+            nodes[i].add_dep("0".to_string());
         }
 
         let r = DepGraph::new(&nodes);
@@ -275,9 +270,9 @@ mod tests {
     // #[test]
     // #[should_panic]
     // fn par_circular_graph() {
-    //     let mut n1 = StrNode::new("1");
-    //     let mut n2 = StrNode::new("2");
-    //     let mut n3 = StrNode::new("3");
+    //     let mut n1 = Node::new("1");
+    //     let mut n2 = Node::new("2");
+    //     let mut n3 = Node::new("3");
 
     //     n1.add_dep(n2.id());
     //     n2.add_dep(n3.id());

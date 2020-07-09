@@ -23,7 +23,7 @@ where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
 {
     /// Create a new DepGraph based on a vector of edges.
-    pub fn new(nodes: &[impl Node<Inner = I>]) -> Self {
+    pub fn new(nodes: &[Node<I>]) -> Self {
         let (deps, rdeps, ready_nodes) = DepGraph::parse_nodes(nodes);
 
         DepGraph {
@@ -33,7 +33,7 @@ where
         }
     }
 
-    fn parse_nodes(nodes: &[impl Node<Inner = I>]) -> (DependencyMap<I>, DependencyMap<I>, Vec<I>) {
+    fn parse_nodes(nodes: &[Node<I>]) -> (DependencyMap<I>, DependencyMap<I>, Vec<I>) {
         let mut deps = InnerDependencyMap::<I>::default();
         let mut rdeps = InnerDependencyMap::<I>::default();
         let mut ready_nodes = Vec::<I>::default();

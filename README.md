@@ -17,33 +17,47 @@ This library supports both sequential and parallel (multi-threaded) operations o
 Here is a simple example on how to use this library:
 
 ```rust
-use dep_graph::{Node, DepGraph,StrNode};
+use dep_graph::{Node, DepGraph};
+#[cfg(feature = "rayon")]
 use rayon::prelude::*;
 
-fn my_graph() {
-    // Create a list of nodes
-    let mut root = StrNode::new("root");
-    let mut dep1 = StrNode::new("dep1");
-    let mut dep2 = StrNode::new("dep2");
-    let leaf = StrNode::new("leaf");
+// Create a list of nodes
+let mut root = Node::new("root");
+let mut dep1 = Node::new("dep1");
+let mut dep2 = Node::new("dep2");
+let leaf = Node::new("leaf");
 
-    // Map their connections
-    root.add_dep(dep1.id());
-    root.add_dep(dep2.id());
-    dep1.add_dep(leaf.id());
-    dep2.add_dep(leaf.id());
+// Map their connections
+root.add_dep(dep1.id());
+root.add_dep(dep2.id());
+dep1.add_dep(leaf.id());
+dep2.add_dep(leaf.id());
 
-    // Create a graph
-    let nodes = vec![root, dep1, dep2, leaf];
+// Create a graph
+let nodes = vec![root, dep1, dep2, leaf];
+
+// Print the name of all nodes in the dependency graph.
+// This will parse the dependency graph sequentially
+{
     let graph = DepGraph::new(&nodes);
+    graph
+        .into_iter()
+        .for_each(|node| {
+            println!("{:?}", node)
+        });
+}
 
-    // Run an operation over all nodes in the graph.
-    // The function receives the identity value from the node, not the
-    // entire node (e.g. "root", "dep1", etc. in this case).
+// This is the same as the previous command, excepts it leverages rayon
+// to process them in parallel as much as possible.
+#[cfg(feature = "rayon")]
+{
+    let graph = DepGraph::new(&nodes);
     graph
         .into_par_iter()
         .for_each(|node| {
-            println!("{}", *node)
+            // The node is a depgraph::Wrapper object, not a String.
+            // We need to use `*node` to get its value.
+            println!("{:?}", *node)
         });
 }
 ```

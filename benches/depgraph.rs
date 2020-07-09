@@ -1,26 +1,26 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use dep_graph::{DepGraph, Node, StrNode};
+use dep_graph::{DepGraph, Node};
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
 use std::thread;
 use std::time::Duration;
 
 /// Create a layer of nodes that don't have any dependencies
-fn root_layer(count: usize) -> Vec<StrNode> {
+fn root_layer(count: usize) -> Vec<Node<String>> {
     (0..count)
-        .map(|i| StrNode::new(format!("node0_{}", i).as_str()))
+        .map(|i| Node::new(format!("node0_{}", i)))
         .collect()
 }
 
 /// Utility function that adds a layer of nodes depending on the provided
 /// layer and returns them.
-fn add_layer(index: usize, count: usize) -> Vec<StrNode> {
+fn add_layer(index: usize, count: usize) -> Vec<Node<String>> {
     (0..count)
         .map(|i| {
-            let mut node = StrNode::new(format!("node{}_{}", index, i).as_str());
+            let mut node = Node::new(format!("node{}_{}", index, i));
             // Mark the entire previous layer as a dependency of this node
             for j in 0..count {
-                node.add_dep(&format!("node{}_{}", index - 1, j));
+                node.add_dep(format!("node{}_{}", index - 1, j));
             }
             node
         })
@@ -30,12 +30,12 @@ fn add_layer(index: usize, count: usize) -> Vec<StrNode> {
 pub fn parallel_benchmark(c: &mut Criterion) {
     const NUM_LAYERS: usize = 20;
     #[cfg(feature = "rayon")]
-    fn par_no_op(nodes: &Vec<StrNode>) {
+    fn par_no_op(nodes: &Vec<Node<String>>) {
         DepGraph::new(nodes)
             .into_par_iter()
             .for_each(|_node| thread::sleep(Duration::from_nanos(100)))
     }
-    fn seq_no_op(nodes: &Vec<StrNode>) {
+    fn seq_no_op(nodes: &Vec<Node<String>>) {
         DepGraph::new(nodes)
             .into_iter()
             .for_each(|_node| thread::sleep(Duration::from_nanos(100)))

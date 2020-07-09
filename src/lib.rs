@@ -122,13 +122,13 @@
 //! of identity information. For this purpose, you can implement the
 //! [`Node trait`](trait.Node.html).
 
-mod dep;
+mod node;
 pub mod error;
 mod graph;
 #[cfg(feature = "rayon")]
 mod graph_par;
 
-pub use dep::{Node, StrNode};
+pub use node::{Node, StrNode};
 pub use graph::DepGraph;
 #[cfg(feature = "rayon")]
 pub use graph_par::Wrapper;

@@ -7,7 +7,7 @@ This is a rust library to perform iterative operations over dependency graphs.
 
 ```toml
 [dependencies]
-depgraph = "0.1"
+dep-graph = "0.1"
 ```
 
 This library supports both sequential and parallel (multi-threaded) operations out of the box. By default, multi-threaded operations will run a number of threads equal to the number of cores.

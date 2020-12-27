@@ -65,11 +65,26 @@
 //! in the same situation, as there are no nodes without un-processed
 //! dependencies.
 //!
+//! ## Parallel iterators
+//!
+//! This library supports using `rayon` as an optional dependency. When using
+//! `rayon`, [DepGraph](struct.DepGraph.html) supports a new method
+//! `into_par_iter()` that will process the dependency graph across multiple
+//! threads.
+//!
+//! Under the hood, it works by creating a dispatcher thread and a series of
+//! crossbeam channels to dispatch nodes and notify the dispatcher when nodes
+//! are done processing.
+//!
+//! Because of that, iterator functions receive a
+//! [Wrapper](struct.Wrapper.html) instead of the item itself. The underlying
+//! item is available by using the dereference operator (`*wrapper`).
+//!
 //! ## Basic usage
 //!
 //! ```rust
 //! use dep_graph::{Node, DepGraph};
-//! #[cfg(feature = "rayon")]
+//! #[cfg(feature = "parallel")]
 //! use rayon::prelude::*;
 //!
 //! // Create a list of nodes
@@ -100,44 +115,36 @@
 //!
 //! // This is the same as the previous command, excepts it leverages rayon
 //! // to process them in parallel as much as possible.
-//! #[cfg(feature = "rayon")]
+//! #[cfg(feature = "parallel")]
 //! {
 //!     let graph = DepGraph::new(&nodes);
 //!     graph
 //!         .into_par_iter()
 //!         .for_each(|node| {
-//!             // The node is a depgraph::Wrapper object, not a String.
+//!             // The node is a dep_graph::Wrapper object, not a String.
 //!             // We need to use `*node` to get its value.
 //!             println!("{:?}", *node)
 //!         });
 //! }
 //! ```
-//!
-//! ## Create your own node type
-//!
-//! This library provides a node for string types
-//! [`Node`](struct.Node.html).
-//!
-//! However, you may want to implement your own node type to hold another type
-//! of identity information. For this purpose, you can implement the
-//! [`Node trait`](trait.Node.html).
 
 pub mod error;
 mod graph;
-#[cfg(feature = "rayon")]
+#[cfg(feature = "parallel")]
 mod graph_par;
 mod node;
 
 pub use graph::DepGraph;
-#[cfg(feature = "rayon")]
+#[cfg(feature = "parallel")]
 pub use graph_par::Wrapper;
 pub use node::Node;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "parallel")]
     use rayon::prelude::*;
+    #[cfg(feature = "parallel")]
     use std::time::Duration;
 
     /// Run against a diamond graph
@@ -149,7 +156,7 @@ mod tests {
     ///  \ /
     ///   4
     /// ```
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "parallel")]
     #[test]
     fn par_diamond_graph() {
         let mut n1 = Node::new("1");
@@ -170,7 +177,7 @@ mod tests {
         assert_eq!(result.len(), deps.len());
     }
 
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "parallel")]
     #[test]
     fn par_diamond_graph_steps() {
         let mut n1 = Node::new("1");
@@ -194,7 +201,7 @@ mod tests {
         assert_eq!(result, 10);
     }
 
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "parallel")]
     #[test]
     fn par_diamond_graph_with_timeout() {
         let mut n1 = Node::new("1");
@@ -240,7 +247,7 @@ mod tests {
     }
 
     /// 1 000 nodes with 999 depending on one
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "parallel")]
     #[test]
     fn par_thousand_graph() {
         let mut nodes: Vec<Node<_>> = (0..1000).map(|i| Node::new(format!("{}", i))).collect();

@@ -1,6 +1,6 @@
 [package]
 name = "dep-graph"
-version = "0.1.6"
+version = "0.2.0"
 authors = ["Nicolas Moutschen <nicolas.moutschen@gmail.com>"]
 edition = "2018"
 license = "MIT"
@@ -11,16 +11,18 @@ description = "Dependency graph resolver library"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-default = ["rayon"]
+default = ["parallel"]
+
+parallel = ["rayon", "crossbeam-channel"]
 
 [dev-dependencies]
 criterion = "0.3"
 
 [[bench]]
-name = "depgraph"
+name = "dep_graph"
 harness = false
 
 [dependencies]
-crossbeam-channel = "0.4"
+crossbeam-channel = { version = "0.4", optional = true }
 rayon = { version = "1.5", optional = true }
 num_cpus = "1.13"

@@ -40,14 +40,19 @@ where
 
 /// Wrapper for an item
 ///
-/// This is used to pass items through iterators
+/// This is used to pass items through parallel iterators. When the wrapper is
+/// dropped, we decrement the processing `counter` and notify the dispatcher
+/// thread through the `item_done_tx` channel.
 #[derive(Clone)]
 pub struct Wrapper<I>
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
 {
+    // Wrapped item
     inner: I,
+    // Reference to the number of items being currently processed
     counter: Arc<AtomicUsize>,
+    // Channel to notify that the item is done processing (upon drop)
     item_done_tx: Sender<I>,
 }
 
@@ -55,6 +60,14 @@ impl<I> Wrapper<I>
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
 {
+    /// Create a new Wrapper item
+    ///
+    /// This needs a reference to the processing counter to keep count of the
+    /// number of items currently processed (used to check for circular
+    /// dependencies) and the item done channel to notify the dispatcher
+    /// thread.
+    ///
+    /// Upon creating of a `Wrapper`, we also increment the processing counter.
     pub fn new(inner: I, counter: Arc<AtomicUsize>, item_done_tx: Sender<I>) -> Self {
         (*counter).fetch_add(1, Ordering::SeqCst);
         Self {
@@ -65,10 +78,15 @@ where
     }
 }
 
+/// Drop implementation to decrement the processing counter and notify the
+/// dispatcher thread.
 impl<I> Drop for Wrapper<I>
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
 {
+    /// Triggered when the wrapper is dropped.
+    ///
+    /// This will decrement the processing counter and notify the dispatcher thread.
     fn drop(&mut self) {
         (*self.counter).fetch_sub(1, Ordering::SeqCst);
         self.item_done_tx
@@ -77,6 +95,9 @@ where
     }
 }
 
+/// Dereference implementation to access the inner item
+///
+/// This allow accessing the item using `(*wrapper)`.
 impl<I> ops::Deref for Wrapper<I>
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
@@ -88,6 +109,9 @@ where
     }
 }
 
+/// Dereference implementation to access the inner item
+///
+/// This allow accessing the item using `(*wrapper)`.
 impl<I> ops::DerefMut for Wrapper<I>
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
@@ -141,9 +165,6 @@ where
         let timeout = Arc::new(RwLock::new(DEFAULT_TIMEOUT));
         let counter = Arc::new(AtomicUsize::new(0));
 
-        // let (item_ready_rx, item_done_tx) =
-        //     DepGraphParIter::init(counter.clone(), deps, rdeps, ready_nodes);
-
         // Create communication channel for processed nodes
         let (item_ready_tx, item_ready_rx) = crossbeam_channel::unbounded::<I>();
         let (item_done_tx, item_done_rx) = crossbeam_channel::unbounded::<I>();
@@ -183,6 +204,7 @@ where
                         let counter_val = loop_counter.load(Ordering::SeqCst);
                         if deps.is_empty() {
                             break;
+                        // There are still some items processing.
                         } else if counter_val > 0 {
                             continue;
                         } else {

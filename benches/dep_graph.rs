@@ -1,6 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use dep_graph::{DepGraph, Node};
-#[cfg(feature = "rayon")]
+#[cfg(feature = "parallel")]
 use rayon::prelude::*;
 use std::thread;
 use std::time::Duration;
@@ -29,7 +29,7 @@ fn add_layer(index: usize, count: usize) -> Vec<Node<String>> {
 
 pub fn parallel_benchmark(c: &mut Criterion) {
     const NUM_LAYERS: usize = 20;
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "parallel")]
     fn par_no_op(nodes: &Vec<Node<String>>) {
         DepGraph::new(nodes)
             .into_par_iter()
@@ -53,7 +53,7 @@ pub fn parallel_benchmark(c: &mut Criterion) {
         });
 
         // Run the resolver
-        #[cfg(feature = "rayon")]
+        #[cfg(feature = "parallel")]
         c.bench_function("par_same_nodes", |b| {
             b.iter(|| par_no_op(black_box(&nodes)))
         });
@@ -73,7 +73,7 @@ pub fn parallel_benchmark(c: &mut Criterion) {
         });
 
         // Run the resolver
-        #[cfg(feature = "rayon")]
+        #[cfg(feature = "parallel")]
         c.bench_function("par_double_nodes", |b| {
             b.iter(|| par_no_op(black_box(&nodes)))
         });
@@ -93,7 +93,7 @@ pub fn parallel_benchmark(c: &mut Criterion) {
         });
 
         // Run the resolver
-        #[cfg(feature = "rayon")]
+        #[cfg(feature = "parallel")]
         c.bench_function("par_half_nodes", |b| {
             b.iter(|| par_no_op(black_box(&nodes)))
         });
@@ -113,7 +113,7 @@ pub fn parallel_benchmark(c: &mut Criterion) {
         });
 
         // Run the resolver
-        #[cfg(feature = "rayon")]
+        #[cfg(feature = "parallel")]
         c.bench_function("par_100_nodes", |b| b.iter(|| par_no_op(black_box(&nodes))));
         c.bench_function("seq_100_nodes", |b| b.iter(|| seq_no_op(black_box(&nodes))));
     }

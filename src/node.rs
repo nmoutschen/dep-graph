@@ -52,6 +52,14 @@ mod tests {
     }
 
     #[test]
+    fn empty_usize_node() {
+        let node: Node<usize> = Node::new(42);
+
+        assert_eq!(*node.id(), 42);
+        assert_eq!(node.deps.len(), 0);
+    }
+
+    #[test]
     fn one_dep() {
         let mut root = Node::new("root");
         let dep1 = Node::new("dep1");

@@ -171,8 +171,8 @@ where
 
         // Inject ready nodes
         ready_nodes
-            .iter()
-            .for_each(|node| item_ready_tx.send(node.clone()).unwrap());
+            .into_iter()
+            .for_each(|node| item_ready_tx.send(node).unwrap());
 
         // Clone Arcs for dispatcher thread
         let loop_timeout = timeout.clone();
@@ -190,8 +190,8 @@ where
 
                         // Send the next available nodes to the channel.
                         next_nodes
-                            .iter()
-                            .for_each(|node_id| item_ready_tx.send(node_id.clone()).unwrap());
+                            .into_iter()
+                            .for_each(|node_id| item_ready_tx.send(node_id).unwrap());
 
                         // If there are no more nodes, leave the loop
                         if deps.read().unwrap().is_empty() {
@@ -269,7 +269,7 @@ where
         CB: ProducerCallback<Self::Item>,
     {
         callback.callback(DepGraphProducer {
-            counter: self.counter.clone(),
+            counter: self.counter,
             item_ready_rx: self.item_ready_rx,
             item_done_tx: self.item_done_tx,
         })
@@ -327,8 +327,8 @@ where
 
     fn into_iter(self) -> Self::IntoIter {
         Self {
-            counter: self.counter.clone(),
-            item_ready_rx: self.item_ready_rx.clone(),
+            counter: self.counter,
+            item_ready_rx: self.item_ready_rx,
             item_done_tx: self.item_done_tx,
         }
     }

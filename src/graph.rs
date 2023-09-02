@@ -50,7 +50,7 @@ where
                 if !rdeps.contains_key(node_dep) {
                     let mut dep_rdeps = HashSet::new();
                     dep_rdeps.insert(node.id().clone());
-                    rdeps.insert(node_dep.clone(), dep_rdeps.clone());
+                    rdeps.insert(node_dep.clone(), dep_rdeps);
                 } else {
                     let dep_rdeps = rdeps.get_mut(node_dep).unwrap();
                     dep_rdeps.insert(node.id().clone());
@@ -74,7 +74,7 @@ where
     type IntoIter = DepGraphIter<I>;
 
     fn into_iter(self) -> Self::IntoIter {
-        DepGraphIter::<I>::new(self.ready_nodes.clone(), self.deps.clone(), self.rdeps)
+        DepGraphIter::<I>::new(self.ready_nodes, self.deps, self.rdeps)
     }
 }
 
@@ -147,7 +147,7 @@ where
     let next_nodes = rdep_ids
         .iter()
         .filter_map(|rdep_id| {
-            let rdep = match deps.get_mut(&rdep_id) {
+            let rdep = match deps.get_mut(rdep_id) {
                 Some(rdep) => rdep,
                 None => return None,
             };

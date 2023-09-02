@@ -9,6 +9,7 @@ pub type InnerDependencyMap<I> = HashMap<I, HashSet<I>>;
 pub type DependencyMap<I> = Arc<RwLock<InnerDependencyMap<I>>>;
 
 /// Dependency graph
+#[derive(Clone, Debug, Default)]
 pub struct DepGraph<I>
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,

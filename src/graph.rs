@@ -9,7 +9,7 @@ pub type InnerDependencyMap<I> = HashMap<I, HashSet<I>>;
 pub type DependencyMap<I> = Arc<RwLock<InnerDependencyMap<I>>>;
 
 /// Dependency graph
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct DepGraph<I>
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
@@ -63,6 +63,20 @@ where
             Arc::new(RwLock::new(rdeps)),
             ready_nodes,
         )
+    }
+}
+
+impl<I: Clone> Clone for DepGraph<I>
+where
+    I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
+{
+    fn clone(&self) -> Self {
+        Self {
+            ready_nodes: self.ready_nodes.clone(),
+            // clone the inner HashMap so that a new iteration can be started
+            deps: Arc::new(RwLock::new(self.deps.read().unwrap().clone())),
+            rdeps: Arc::new(RwLock::new(self.rdeps.read().unwrap().clone())),
+        }
     }
 }
 

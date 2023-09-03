@@ -44,16 +44,9 @@ where
 
             if node.deps().is_empty() {
                 ready_nodes.push(node.id().clone());
-            }
-
-            for node_dep in node.deps() {
-                if !rdeps.contains_key(node_dep) {
-                    let mut dep_rdeps = HashSet::new();
-                    dep_rdeps.insert(node.id().clone());
-                    rdeps.insert(node_dep.clone(), dep_rdeps);
-                } else {
-                    let dep_rdeps = rdeps.get_mut(node_dep).unwrap();
-                    dep_rdeps.insert(node.id().clone());
+            } else {
+                for node_dep in node.deps() {
+                    rdeps.entry(node_dep.clone()).or_default().insert(node.id().clone());
                 }
             }
         }

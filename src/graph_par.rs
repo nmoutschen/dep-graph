@@ -91,7 +91,7 @@ where
         (*self.counter).fetch_sub(1, Ordering::SeqCst);
         self.item_done_tx
             .send(self.inner.clone())
-            .expect("could not send message")
+            .unwrap_or_else(|err| panic!("could not send message: {}", err))
     }
 }
 
@@ -170,9 +170,11 @@ where
         let (item_done_tx, item_done_rx) = crossbeam_channel::unbounded::<I>();
 
         // Inject ready nodes
-        ready_nodes
-            .iter()
-            .for_each(|node| item_ready_tx.send(node.clone()).unwrap());
+        ready_nodes.into_iter().for_each(|node| {
+            item_ready_tx
+                .send(node)
+                .unwrap_or_else(|err| panic!("could not send message: {}", err))
+        });
 
         // Clone Arcs for dispatcher thread
         let loop_timeout = timeout.clone();
@@ -190,8 +192,11 @@ where
 
                         // Send the next available nodes to the channel.
                         next_nodes
-                            .iter()
-                            .for_each(|node_id| item_ready_tx.send(node_id.clone()).unwrap());
+                            .into_iter()
+                            .for_each(|node_id| {
+                                item_ready_tx.send(node_id)
+                                    .unwrap_or_else(|err| panic!("could not send message: {}", err))
+                            });
 
                         // If there are no more nodes, leave the loop
                         if deps.read().unwrap().is_empty() {
@@ -269,7 +274,7 @@ where
         CB: ProducerCallback<Self::Item>,
     {
         callback.callback(DepGraphProducer {
-            counter: self.counter.clone(),
+            counter: self.counter,
             item_ready_rx: self.item_ready_rx,
             item_done_tx: self.item_done_tx,
         })
@@ -327,8 +332,8 @@ where
 
     fn into_iter(self) -> Self::IntoIter {
         Self {
-            counter: self.counter.clone(),
-            item_ready_rx: self.item_ready_rx.clone(),
+            counter: self.counter,
+            item_ready_rx: self.item_ready_rx,
             item_done_tx: self.item_done_tx,
         }
     }

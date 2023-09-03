@@ -148,33 +148,32 @@ pub fn remove_node_id<I>(
 where
     I: Clone + fmt::Debug + Eq + Hash + PartialEq + Send + Sync + 'static,
 {
-    let rdep_ids = {
-        match rdeps.read().unwrap().get(&id) {
-            Some(node) => node.clone(),
-            // If no node depends on a node, it will not appear
-            // in rdeps.
-            None => Default::default(),
-        }
-    };
-
     let mut deps = deps.write().unwrap();
-    let next_nodes = rdep_ids
-        .iter()
-        .filter_map(|rdep_id| {
-            let rdep = match deps.get_mut(rdep_id) {
-                Some(rdep) => rdep,
-                None => return None,
-            };
 
-            rdep.remove(&id);
+    let next_nodes = if let Some(rdep_ids) = rdeps.read().unwrap().get(&id) {
+        let next_nodes = rdep_ids
+            .iter()
+            .filter_map(|rdep_id| {
+                let rdep = match deps.get_mut(rdep_id) {
+                    Some(rdep) => rdep,
+                    None => return None,
+                };
 
-            if rdep.is_empty() {
-                Some(rdep_id.clone())
-            } else {
-                None
-            }
-        })
-        .collect();
+                rdep.remove(&id);
+
+                if rdep.is_empty() {
+                    Some(rdep_id.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        next_nodes
+    } else {
+        // If no node depends on a node, it will not appear in rdeps.
+        vec![]
+    };
 
     // Remove the current node from the list of dependencies.
     deps.remove(&id);
